@@ -1,0 +1,125 @@
+<div
+  style="
+    background-color: rgb(191, 191, 209);
+    width: 50%;
+    height: auto;
+    display: flex;
+    justify-content: center;
+  "
+>
+  <div>
+    <h1 style="color: blue">Centro de Mensajes</h1>
+    <h2 id="compresion"></h2>
+    <br />
+    <form id="formularioChat">
+      <div>
+        <input
+          id="email"
+          type="string"
+          name="email"
+          placeholder="Email"
+          required
+        />
+      </div>
+      <br />
+      <div>
+        <input
+          id="nombre"
+          type="string"
+          name="nombre"
+          placeholder="Nombre"
+          required
+        />
+      </div>
+      <br />
+      <div>
+        <input
+          id="apellido"
+          type="string"
+          name="apellido"
+          placeholder="Apellido"
+          required
+        />
+      </div>
+      <br />
+      <div>
+        <input
+          id="edad"
+          type="number"
+          name="edad"
+          placeholder="Edad"
+          required
+        />
+      </div>
+      <br />
+      <div>
+        <input
+          id="alias"
+          type="string"
+          name="alias"
+          placeholder="Alias"
+          required
+        />
+      </div>
+      <br />
+      <div>
+        <input
+          id="avatar"
+          type="string"
+          name="avatar"
+          placeholder="Avatar"
+          required
+        />
+      </div>
+      <br />
+      <div>
+        <input
+          id="text"
+          type="text"
+          name="text"
+          placeholder="Ingrese un Mensaje..."
+        />
+        <button>Enviar</button>
+      </div>
+      <hr />
+    </form>
+
+    <div id="messages"></div>
+    <script>
+      socket.on("messages", (data) => {
+        renderMessages(data);
+      });
+
+      function renderMessages(data) {
+        const html = data
+          .map((elemento) => {
+            return `<div>
+                <strong style='color:blue;'>${elemento.author?.email}</strong>
+                <b style='color:red'> [${elemento.author?.alias}]</b> 
+                : <em style='font-weight: italic;color:green'>${elemento?.text}</em>
+                <img style="width: 50px;padding-left: 20px;" src=${elemento.author?.avatar}>
+                </div>
+        `;
+          })
+          .join(" ");
+        document.getElementById("messages").innerHTML = html;
+      }
+
+      const formularioChat = document.getElementById("formularioChat");
+      formularioChat.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const mensaje = {
+          email: document.getElementById("email").value,
+          nombre: document.getElementById("nombre").value,
+          apellido: document.getElementById("apellido").value,
+          edad: document.getElementById("edad").value,
+          alias: document.getElementById("alias").value,
+          avatar: document.getElementById("avatar").value,
+          text: document.getElementById("text").value,
+        };
+        socket.emit("new-message", mensaje);
+      });
+    </script>
+  </div>
+</div>

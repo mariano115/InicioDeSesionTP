@@ -1,0 +1,46 @@
+<div>
+    <div>
+        <div style="padding-bottom: 3vh;">
+            <table style="background-color: rgb(95, 95, 117); width: 100%;">
+                <tr style="color: rgb(0, 0, 0);">
+                    <th style="color: white">Nombre</th>
+                    <th style="color: white">Precio</th>
+                    <th style="color: white">Foto</th>
+                </tr>
+            </table>
+            <div id="products"></div>
+        </div>
+    </div>
+</div>
+<script>
+    socket.on("products", (data) => {
+        renderProducts(data);
+    });
+
+    function renderProducts(productos) {
+        let html
+        if (productos.length > 0) {
+            html = '<table id="products" style="background-color: rgb(95, 95, 117); width: 100%;">'
+            html = html + productos
+                .map((producto) => {
+                    return `
+                    <tr>
+<td style="color: white;padding-left: 30px;">
+        ${producto.nombre}
+    </td>
+    <td style="color: white; padding-left: 40px;">
+        ${producto.precio}
+    </td>
+    <td style="color: white; padding-left: 30px;">
+        <img style="width: 50px;padding-left: 20px;" src=${producto.foto}>
+    </td>
+</tr>`
+                })
+                .join(" ");
+
+        } else {
+            html = '<h3 style="color: black">no existen datos</h3>'
+        }
+        document.getElementById("products").innerHTML = html;
+    }
+</script>

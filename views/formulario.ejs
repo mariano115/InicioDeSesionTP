@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <body>
+    <div
+      style="
+        background-color: rgb(191, 191, 209);
+        width: 50%;
+        height: auto;
+        display: flex;
+        justify-content: center;
+        justify-content: space-evenly;
+      "
+      id="nombreLogin"
+    >
+      <h1 style="color: blue">Bienvenido <%= nombre %></h1>
+      <form method="post" action="/logout?nombre=<%= nombre %>">
+        <!-- id="loginFormulario" -->
+        <button
+          id="nombre"
+          type="submit"
+          style="margin-top: 30px; background-color: rgb(143, 138, 161)"
+        >
+          Logout
+        </button>
+      </form>
+    </div>
+    <br />
+    <div
+      style="
+        background-color: rgb(191, 191, 209);
+        width: 50%;
+        height: auto;
+        display: flex;
+        justify-items: center;
+        flex-direction: column;
+        align-items: center;
+      "
+    >
+      <div>
+        <h1 style="color: blue">Ingrese Producto</h1>
+        <br />
+        <form id="formularioProducto">
+          <div>
+            <div>
+              <label for="nombreProd"><b>Nombre</b></label>
+            </div>
+            <input id="nombreProd" type="text" name="nombreProd" />
+          </div>
+          <div>
+            <div>
+              <label for="precio"><b>Precio</b></label>
+            </div>
+            <input id="precio" type="text" name="precio" />
+          </div>
+          <div>
+            <div>
+              <label for="foto"><b>Foto</b></label>
+            </div>
+            <input id="foto" type="text" name="foto" />
+          </div>
+          <button id="enviar" style="margin-top: 10px">Enviar</button>
+        </form>
+      </div>
+      <script src="/socket.io/socket.io.js"></script>
+      <script>
+        let socket = io();
+        const formularioProducto =
+          document.getElementById("formularioProducto");
+        formularioProducto.addEventListener("submit", (e) => {
+          e.preventDefault();
+              const producto = {
+                nombre: document.getElementById("nombreProd").value,
+                precio: document.getElementById("precio").value,
+                foto: document.getElementById("foto").value,
+              };
+              console.log(producto);
+              socket.emit("new-product", producto);
+        });
+      </script>
+      <div>
+        <h1 style="color: blue">Vista de Productos</h1>
+        <%- include('./partials/tabla.ejs') %>
+      </div>
+    </div>
+    <br />
+    <%- include('./partials/chat.ejs') %>
+  </body>
+</html>
