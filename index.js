@@ -1,7 +1,10 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const session = require("express-session");
+const passport = require("passport");
+const { Strategy } = require("passport-local");
 const { getMensajes, addMensaje } = require("./Mensajes");
-const { createUser, verifyUser } = require("./Users");
+const { createUser } = require("./Users");
 const { fakerProducts, auth } = require("./utils");
 const { Server: HttpServer } = require("http");
 const { Server: IOServer } = require("socket.io");
@@ -11,8 +14,9 @@ const io = new IOServer(httpServer);
 const cors = require("cors");
 const Config = require("./config");
 const cookieParser = require("cookie-parser");
-const session = require("express-session");
 const bcrypt = require("bcrypt");
+const userModel = require("./models/User.model");
+const localStrategy = Strategy;
 
 const MongoStore = require("connect-mongo");
 
@@ -20,6 +24,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
 app.use(cookieParser("secreto"));
+
+passport.use('login', new localStrategy(async (email, password, done)=>{
+	const usuario = await userModel.findOne({email: email, password: password});
+  console.log(usuario);
+
+	if (!usuario){
+		return done(null, false)
+	} else {
+		return done(null, existe)
+	}
+}))
+
 app.use(
   session({
     store: MongoStore.create({
@@ -72,6 +88,10 @@ io.on("connection", async (socket) => {
   });
 });
 
+//middlewares passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.set("views", "./views");
 app.set("view engine", "ejs");
 
@@ -79,16 +99,10 @@ app.get("/", auth, (req, res) => {
   res.redirect("/home");
 });
 
-app.post("/login", (req, res) => {
-  if (req.body.email && req.body.password) {
-    if(verifyUser(req.body.email, req.body.password)){
-      req.session.email = req.body.email;
-    }else{
-      //REDIRIGIR A LOGIN FALLIDO
-    }
-    res.redirect("/");
-  }
-});
+app.post("/login",passport.authenticate('login',{
+	successRedirect: '/formulario',
+	failureRedirect: '/login-error'
+}))
 
 app.get("/home", auth, (req, res) => {
   res.render("formulario", { nombre: req.session.user });
@@ -121,6 +135,14 @@ app.post("/logout", (req, res) => {
     res.render("bye", { nombre: req.query.nombre });
   });
 });
+
+app.get("/register-error", (req, res) => {
+  res.render("register-error");
+});
+
+app.get("/login-error", (req, res) => {
+  res.render("login-error");
+}); 
 
 app.get("/test-mensaje", (req, res) => {
   res.send(testNormalizr());

@@ -2,10 +2,10 @@ const util = require("util");
 const mongoose = require("mongoose");
 const userModel = require("./models/User.model");
 
-const verifyUser = async (email, password) => {
+/* const verifyUser = async (email, password) => {
   //VERIFICAR EMAIL Y PASSWORD REVISAR TEMA DESENCRIPTADO
   return await userModel.find();
-};
+}; */
 
 const existUser = async (email) => {
   return await userModel.findOne({email: email})
@@ -26,4 +26,4 @@ const createUser = async (userToCreate) => {
   }
 };
 
-module.exports = { verifyUser, createUser };
+module.exports = { createUser };
