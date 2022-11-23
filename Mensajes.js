@@ -1,5 +1,3 @@
-const util = require("util");
-const mongoose = require("mongoose");
 const messageModel = require("./models/Message.model");
 
 const getMensajes = async () => {

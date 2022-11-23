@@ -1,11 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
-const passport = require("passport");
-const { Strategy } = require("passport-local");
 const { getMensajes, addMensaje } = require("./Mensajes");
 const { createUser } = require("./Users");
-const { fakerProducts, auth } = require("./utils");
+const { fakerProducts, auth, createHash } = require("./utils");
 const { Server: HttpServer } = require("http");
 const { Server: IOServer } = require("socket.io");
 const app = express();
@@ -14,28 +12,22 @@ const io = new IOServer(httpServer);
 const cors = require("cors");
 const Config = require("./config");
 const cookieParser = require("cookie-parser");
-const bcrypt = require("bcrypt");
 const userModel = require("./models/User.model");
-const localStrategy = Strategy;
-
 const MongoStore = require("connect-mongo");
+const { isValidPassword } = require("./utils");
 
+//passport imports
+const passport = require("passport");
+const { Strategy } = require("passport-local");
+const LocalStrategy = Strategy;
+
+//servidor
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
+
+/*----------- Session -----------*/
 app.use(cookieParser("secreto"));
-
-passport.use('login', new localStrategy(async (email, password, done)=>{
-	const usuario = await userModel.findOne({email: email, password: password});
-  console.log(usuario);
-
-	if (!usuario){
-		return done(null, false)
-	} else {
-		return done(null, existe)
-	}
-}))
-
 app.use(
   session({
     store: MongoStore.create({
@@ -49,18 +41,9 @@ app.use(
   })
 );
 
-const PORT = process.env.PORT || 8080;
-
-mongoose.connect(
-  Config.urlMongo,
-  {
-    useNewUrlParser: true,
-  },
-  (err) => {
-    if (err) throw new Error(`Error de conexión a la base de datos ${err}`);
-    console.log("Base de datos conectada");
-  }
-);
+// motor de vistas
+app.set("views", "./views");
+app.set("view engine", "ejs");
 
 io.on("connection", async (socket) => {
   await getMensajes().then((res) => socket.emit("messages", res));
@@ -88,24 +71,86 @@ io.on("connection", async (socket) => {
   });
 });
 
+const PORT = process.env.PORT || 8080;
+
+mongoose.connect(
+  Config.urlMongo,
+  {
+    useNewUrlParser: true,
+  },
+  (err) => {
+    if (err) throw new Error(`Error de conexión a la base de datos ${err}`);
+    console.log("Base de datos conectada");
+  }
+);
+
 //middlewares passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.set("views", "./views");
-app.set("view engine", "ejs");
+passport.use(
+  "login",
+  new LocalStrategy(
+    { usernameField: 'email', passwordField: 'password' },
+    ( email, password, done) => {
+      mongoose.connect(Config.urlMongo);
+      try {
+        userModel.findOne(
+          {
+            email,
+          },
+          (err, user) => {
+            console.log(user)
+            if (err) {
+              return done(err, null);
+            }
+
+            if (!user) {
+              return done(null, false);
+            }
+
+            if (!isValidPassword(user, password)) {
+              return done(null, false);
+            }
+
+            return done(null, user);
+          }
+        );
+      } catch (e) {
+        return done(e, null);
+      }
+    }
+  )
+);
+
+//serializar y deserializar
+
+passport.serializeUser((user, done) => {
+  done(null, user._id);
+});
+
+passport.deserializeUser((id, done) => {
+  userModel.findById(id, function (err, user) {
+    done(err, user);
+  });
+});
 
 app.get("/", auth, (req, res) => {
   res.redirect("/home");
 });
 
-app.post("/login",passport.authenticate('login',{
-	successRedirect: '/formulario',
-	failureRedirect: '/login-error'
-}))
+app.post("/login",
+  passport.authenticate("login", {
+    failureRedirect: "/login-error"
+  }), (req, res) => {
+    console.log('home')
+    req.session.email = req.body.email;
+    res.redirect("/home");
+  }
+);
 
 app.get("/home", auth, (req, res) => {
-  res.render("formulario", { nombre: req.session.user });
+  res.render("formulario", { email: req.session.email });
 });
 
 app.get("/register", (req, res) => {
@@ -113,17 +158,16 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-  if (req.body.password) {
-    bcrypt.hash(req.body.password, 10, function (err, hash) {
-      if (err) res.render("register-error");
-      const newUser = { email: req.body.email, password: hash}
+  try {
+    const hashPassword = createHash(req.body.password)
+    const newUser = { email: req.body.email, password: hashPassword }
       if (createUser(newUser)) {
         res.redirect("/");
       } else {
-        //REDIRIGIR A LOGIN FALLIDO
         res.render("register-error");
       }
-    });
+  } catch (error) {
+    res.render("register-error");
   }
 });
 
@@ -132,7 +176,7 @@ app.post("/logout", (req, res) => {
     if (err) {
       return res.json({ success: "false", error: err });
     }
-    res.render("bye", { nombre: req.query.nombre });
+    res.render("bye", { nombre: req.query.email });
   });
 });
 
@@ -142,7 +186,7 @@ app.get("/register-error", (req, res) => {
 
 app.get("/login-error", (req, res) => {
   res.render("login-error");
-}); 
+});
 
 app.get("/test-mensaje", (req, res) => {
   res.send(testNormalizr());
